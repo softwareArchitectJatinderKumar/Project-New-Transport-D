@@ -1,0 +1,59 @@
+# Install Angular CLI globally
+npm install -g @angular/cli
+# Replace 'my-new-app' with your project name
+ng new my-new-app
+# Navigate into your new project folder
+cd my-new-app
+
+# Compile and serve the application, automatically opening it in your browser
+ng serve --open
+
+
+
+ng generate component new-page
+# Shorthand: ng g c new-page
+
+# To make the new component accessible via a URL (i.e., making it a "page"), you need to define a route.
+
+# Open the main routing file. In a modern, standalone Angular app, this is usually app.routes.ts (or app-routing.module.ts in older projects).
+
+# Import your new component at the top of the file: 
+
+import { NewPageComponent } from './new-page/new-page.component';
+
+export const routes: Routes = [
+  // Existing routes...
+  { path: 'new-page', component: NewPageComponent, title: 'New Page Title' },
+  // Example for the default home page
+  // { path: '', component: HomeComponent },
+];
+
+<!-- 
+user.email=jatinderkumar.softwaredeveloper@gmail.com
+user.name=Er. jatinder kumar -->
+
+    git config --global user.name "Er. jatinder kumar"
+    git config --global user.email "softwaredeveloper.jatinarora@gmail.com"
+
+
+        git config --list --show-origin
+## npm install xlsx --save
+## npm install @types/xlsx --save-dev # For TypeScript support
+
+
+## ng generate service data/excel-reader
+# Shorthand: ng g s data/excel-reader
+
+
+
+
+# Install ng-zorro-antd for professional UI components (Data Table)
+ng add ng-zorro-antd
+
+# Install libraries for reading Excel files
+npm install xlsx --save
+npm install @types/xlsx --save-dev
+
+## git config --list
+## git config user.email
+## git config user.name
