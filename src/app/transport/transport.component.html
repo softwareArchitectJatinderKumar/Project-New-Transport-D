@@ -1,0 +1,75 @@
+<div class="transport-page">
+  <header class="toolbar">
+    <h2>Transports</h2>
+    <div class="toolbar-controls">
+      <input class="search" placeholder="Search across all columns..." (input)="onSearchChange($event.target.value)" />
+      <button class="btn" (click)="exportCurrent()">Export Updated Excel</button>
+    </div>
+    <div class="user-bar">
+      <ng-container *ngIf="currentUser; else guest">
+        <span class="user">{{ currentUser.username }} ({{ currentUser.role }})</span>
+        <button class="btn small" (click)="logout()">Logout</button>
+      </ng-container>
+      <ng-template #guest><span class="user">Not signed in</span></ng-template>
+    </div>
+  </header>
+
+  <div class="meta">
+    <div>Showing: {{ filteredData.length }} total, page {{ currentPage }} / {{ totalPages }}</div>
+    <div>
+      Page size:
+      <select (change)="$any($event.target).value && setPageSize($any($event.target).value)" [value]="pageSize">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="load-banner" *ngIf="loadMessage">{{ loadMessage }}</div>
+
+  <div class="table-wrap" *ngIf="rows().length > 0; else empty">
+    <table>
+      <thead>
+        <tr>
+          <th *ngFor="let c of columns()" (click)="toggleSort(c)" class="sortable">
+            {{ c }}
+            <span class="sort-indicator" *ngIf="sortColumn === c">{{ sortDirection === 'asc' ? '▲' : sortDirection === 'desc' ? '▼' : '' }}</span>
+          </th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows(); let i = index">
+          <td *ngFor="let c of columns()">
+            <ng-container *ngIf="editingIndex !== i">{{ row[c] }}</ng-container>
+            <ng-container *ngIf="editingIndex === i">
+              <input class="cell-input" [(ngModel)]="editingRow[c]" />
+            </ng-container>
+          </td>
+          <td class="actions">
+            <ng-container *ngIf="editingIndex !== i">
+              <button class="btn small" (click)="startEdit(i)">Edit</button>
+              <button class="btn small danger" (click)="deleteRow(i)">Delete</button>
+            </ng-container>
+            <ng-container *ngIf="editingIndex === i">
+              <button class="btn small" (click)="saveEdit()">Save</button>
+              <button class="btn small" (click)="cancelEdit()">Cancel</button>
+            </ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pagination">
+      <button class="btn" (click)="changePage(-1)">Prev</button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button class="btn" (click)="changePage(1)">Next</button>
+    </div>
+  </div>
+
+  <ng-template #empty>
+    <div class="empty">No records found.</div>
+  </ng-template>
+</div>

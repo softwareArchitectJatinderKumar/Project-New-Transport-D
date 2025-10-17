@@ -1,0 +1,26 @@
+<div class="login-page">
+  <div class="card">
+    <h2>Sign in</h2>
+    <div class="field">
+      <label>User name</label>
+      <input [(ngModel)]="username" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" [(ngModel)]="password" />
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select [(ngModel)]="role">
+        <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button class="btn" (click)="login()">Login</button>
+      <button class="btn" (click)="reset()">Reset</button>
+    </div>
+
+    <div *ngIf="error" class="error">{{ error }}</div>
+  </div>
+</div>

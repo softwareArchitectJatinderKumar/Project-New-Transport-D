@@ -1,0 +1,8 @@
+.login-page { display:flex; align-items:center; justify-content:center; height:80vh; }
+.card { width:360px; padding:18px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); background:#fff; }
+.field { margin-bottom:12px; }
+.field label { display:block; margin-bottom:6px; color:#444; }
+.field input, .field select { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #ddd; }
+.actions { display:flex; gap:8px; justify-content:flex-end; }
+.error { margin-top:8px; color:#c62828; }
+.btn { background:#1976d2; color:#fff; padding:8px 10px; border-radius:6px; border:none; cursor:pointer; }
