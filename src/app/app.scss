@@ -1,0 +1,115 @@
+/* You can add global styles to this file, and also import other style files */
+
+
+// Global icon font ./assets/fonts/feather/style.css
+@import "../assets/fonts/feather/style.css";
+
+
+// // 3rd party plugins
+@import "@mdi/font/css/materialdesignicons.min.css";
+@import "perfect-scrollbar/css/perfect-scrollbar.css";
+@import "highlight.js/styles/googlecode.css";
+@import "ngx-owl-carousel-o/lib/styles/prebuilt-themes/owl.carousel.min.css";
+@import "ngx-owl-carousel-o/lib/styles/prebuilt-themes/owl.theme.default.min.css";
+@import "animate.css/animate.min.css";
+@import "@ng-select/ng-select/themes/default.theme.css";
+// @import "metismenujs/scss/metismenujs";
+@import "dropzone/dist/min/dropzone.min.css";
+@import "quill/dist/quill.snow.css";
+@import "angular-archwizard/styles/archwizard.css";
+@import "simple-datatables/dist/style.css";
+@import "@swimlane/ngx-datatable/index.css";
+@import "@swimlane/ngx-datatable/themes/bootstrap.css";
+@import "@swimlane/ngx-datatable/assets/icons.css";
+@import '@swimlane/ngx-datatable/index.css';
+// @import '@swimlane/ngx-datatable/themes/material.scss';
+@import '@swimlane/ngx-datatable/assets/icons.css';
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+// NobleUI styles for LTR
+@import "../assets/scss/style";
+
+
+// NobleUI styles For RTL
+// @import "./assets/scss/style.rtl.css";
+
+@media (min-width: 1025px) and (max-width: 1280px){
+  .custom-window-class > .modal-dialog > .modal-content {
+
+    width: 60%;
+    max-width: 60%;
+    margin-left: 19.75rem !important;
+   
+ }
+}
+
+/* Media Query for Large screens */
+@media (min-width: 1281px) {
+  .custom-window-class > .modal-dialog > .modal-content {
+
+    width: 60%;
+    max-width: 60%;
+    margin-left: 19.75rem !important;
+   
+ }
+}
+
+
+.swal2-confirm{
+    color:white !important;
+  }
+.sidebar{
+       display: none !important;
+}
+.datatable-header-cell-label{
+    font-size: 14px !important;
+      font-weight: bold !important;
+  }
+  
+  .custom-datatable ngx-datatable.material .datatable-header .datatable-header-cell {
+    font-size: 15px !important;
+  }
+.themeClr{
+    color: #FD6C04 !important;
+}
+.modal-dialog {
+    max-width: 90% !important;
+  }
+
+
+  // added on 13-10-25
+  .fullscreen-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.85);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .loader-spinner {
+    width: 60px;
+    height: 60px;
+    border: 8px solid #ccc;
+    border-top: 8px solid #ff8800;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .loader-text {
+    margin-top: 20px;
+    font-size: 20px;
+    color: #333;
+    font-weight: bold;
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
