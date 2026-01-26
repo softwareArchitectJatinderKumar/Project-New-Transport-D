@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 
 export interface UserToken {
-  username: string;
+username: any;
+  email: string;
   role: string;
 }
 
@@ -9,8 +10,11 @@ export interface UserToken {
 export class AuthService {
   private storageKey = 'transport_app_user';
 
-  login(username: string, role: string) {
-    const token: UserToken = { username, role };
+  login(email: string, role: string) {
+    const token: UserToken = {
+      email, role,
+      username: undefined
+    };
     localStorage.setItem(this.storageKey, JSON.stringify(token));
   }
 

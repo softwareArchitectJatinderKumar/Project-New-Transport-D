@@ -12,7 +12,7 @@ import { AuthService } from '../auth/auth.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent {
-  username = '';
+  email = '';
   password = '';
   role = 'user';
 
@@ -20,10 +20,13 @@ export class LoginComponent {
 
   error: string | null = null;
 
+  private staticEmail = 'admin@transport.com';
+  private staticPassword = 'password123';
+
   constructor(private auth: AuthService, private router: Router) {}
 
   reset() {
-    this.username = '';
+    this.email = '';
     this.password = '';
     this.role = 'user';
     this.error = null;
@@ -31,11 +34,16 @@ export class LoginComponent {
 
   login() {
     // basic client-side check — in real apps verify on server
-    if (!this.username || !this.password) {
-      this.error = 'Please provide username and password';
+    if (!this.email || !this.password) {
+      this.error = 'Please provide email and password';
       return;
     }
-    this.auth.login(this.username, this.role);
-    this.router.navigate(['/transports']);
+    if (this.email !== this.staticEmail || this.password !== this.staticPassword) {
+      this.error = 'Invalid email or password';
+      return;
+    }
+    this.auth.login(this.email, this.role);
+    // route to dashboard as the app landing page
+    this.router.navigate(['/dashboard']);
   }
 }

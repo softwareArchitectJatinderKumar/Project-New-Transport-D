@@ -1,4 +1,31 @@
 
 
 
-<router-outlet />
+<div class="app-shell">
+		<header class="topbar">
+			<div class="brand">
+				<img src="/assets/images/logo.svg" class="logo" alt="Transport App logo" />
+				<div class="title">Transport App</div>
+			</div>
+				<ng-container *ngIf="isAuthenticated; else guest">
+					<nav class="nav">
+						<a routerLink="/transports" routerLinkActive="active">Transports</a>
+						<a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+						<a routerLink="/profile" routerLinkActive="active">Profile</a>
+						<a routerLink="/about" routerLinkActive="active">About</a>
+					</nav>
+					<div class="nav">
+						<a class="btn secondary" (click)="logout()">Logout</a>
+					</div>
+				</ng-container>
+				<ng-template #guest>
+					<div class="nav">
+						<a routerLink="/login" class="btn secondary">Sign in</a>
+					</div>
+				</ng-template>
+	</header>
+
+	<main class="container">
+		<router-outlet></router-outlet>
+	</main>
+</div>

@@ -1,26 +1,35 @@
-<div class="login-page">
-  <div class="card">
-    <h2>Sign in</h2>
-    <div class="field">
-      <label>User name</label>
-      <input [(ngModel)]="username" />
+<div class="auth-page">
+  <div class="auth-split card">
+    <div class="auth-left">
+      <img src="/assets/images/login-img.svg" alt="Login hero" />
     </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" [(ngModel)]="password" />
-    </div>
-    <div class="field">
-      <label>Role</label>
-      <select [(ngModel)]="role">
-        <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
-      </select>
-    </div>
+    <div class="auth-right">
+      <h2>Welcome back</h2>
+      <p class="muted">Sign in to continue to Transport App</p>
 
-    <div class="actions">
-      <button class="btn" (click)="login()">Login</button>
-      <button class="btn" (click)="reset()">Reset</button>
-    </div>
+      <div class="form-row">
+        <label>EmailId</label>
+        <input [(ngModel)]="email" placeholder="your email" />
+      </div>
 
-    <div *ngIf="error" class="error">{{ error }}</div>
+      <div class="form-row">
+        <label>Password</label>
+        <input type="password" [(ngModel)]="password" placeholder="••••••" />
+      </div>
+
+      <div class="form-row">
+        <label>Role</label>
+        <select [(ngModel)]="role">
+          <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+        <button class="btn" (click)="login()">Sign in</button>
+        <button class="btn secondary" (click)="reset()">Reset</button>
+      </div>
+
+      <div *ngIf="error" class="error" style="margin-top:12px;">{{ error }}</div>
+    </div>
   </div>
 </div>

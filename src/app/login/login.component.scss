@@ -1,8 +1,18 @@
-.login-page { display:flex; align-items:center; justify-content:center; height:80vh; }
-.card { width:360px; padding:18px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); background:#fff; }
-.field { margin-bottom:12px; }
-.field label { display:block; margin-bottom:6px; color:#444; }
-.field input, .field select { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #ddd; }
-.actions { display:flex; gap:8px; justify-content:flex-end; }
-.error { margin-top:8px; color:#c62828; }
-.btn { background:#1976d2; color:#fff; padding:8px 10px; border-radius:6px; border:none; cursor:pointer; }
+/* Minimal per-component overrides; most layout is in global styles */
+.card { width: 100%; }
+.error { color: var(--danger); }
+
+.auth-split { display:flex; gap:0; overflow:hidden; }
+.auth-left { flex:1 1 50%; 
+    // background: linear-gradient(90deg, rgba(242, 231, 230, 0.92), rgba(96,165,250,0.92)); 
+    display:flex; align-items:center; justify-content:center; padding:18px; }
+.auth-left img { width:100%; height:auto; max-height:420px; object-fit:cover; border-radius:6px; }
+.auth-right { flex:1 1 50%; padding:28px; display:flex; flex-direction:column; justify-content:center; }
+
+@media (max-width: 768px) {
+	.auth-split { flex-direction:column; }
+	.auth-left { order: -1; padding:10px; }
+	.auth-left img { max-height:200px; }
+	.auth-right { padding:16px; }
+}
+
