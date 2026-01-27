@@ -1,0 +1,59 @@
+<div class="home-page">
+  <header class="toolbar">
+    <h2>Home - Transports Data</h2>
+    <div class="toolbar-controls">
+      <input class="search" placeholder="Search across all columns..." (input)="onSearchChange($event.target.value)" />
+    </div>
+    <div class="user-bar">
+      <ng-container *ngIf="currentUser; else guest">
+        <span class="user">{{ currentUser.username }} ({{ currentUser.role }})</span>
+      </ng-container>
+      <ng-template #guest><span class="user">Not signed in</span></ng-template>
+    </div>
+  </header>
+
+  <div class="meta">
+    <div>Showing: {{ filteredData.length }} total, page {{ currentPage }} / {{ totalPages }}</div>
+    <div>
+      Page size:
+      <select (change)="$any($event.target).value && setPageSize($any($event.target).value)" [value]="pageSize">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="load-banner" *ngIf="loadMessage">{{ loadMessage }}</div>
+
+  <div class="table-wrap" *ngIf="rows().length > 0; else empty">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th *ngFor="let c of columns()" (click)="toggleSort(c)" class="sortable">
+              {{ c }}
+              <span class="sort-indicator" *ngIf="sortColumn === c">{{ sortDirection === 'asc' ? '▲' : sortDirection === 'desc' ? '▼' : '' }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of rows()">
+            <td *ngFor="let c of columns()">{{ row[c] }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button class="btn" (click)="changePage(-1)">Prev</button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button class="btn" (click)="changePage(1)">Next</button>
+    </div>
+  </div>
+
+  <ng-template #empty>
+    <div class="empty">No records found.</div>
+  </ng-template>
+</div>
