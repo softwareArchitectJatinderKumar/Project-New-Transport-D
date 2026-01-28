@@ -44,6 +44,6 @@ export class LoginComponent {
     }
     this.auth.login(this.email, this.role);
     // route to dashboard as the app landing page
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/transports']);
   }
 }
