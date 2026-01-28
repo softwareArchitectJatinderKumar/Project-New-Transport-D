@@ -27,6 +27,15 @@
     </div>
   </div>
 
+  <div class="filters" style="margin-bottom:12px;">
+    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterCrane" (change)="onFilterChange()" /> Crane</label>
+    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterContainer" (change)="onFilterChange()" /> Container</label>
+    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterFullLoads" (change)="onFilterChange()" /> Full Loads</label>
+    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterGeneralFreight" (change)="onFilterChange()" /> General Freight</label>
+    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterVehicle" (change)="onFilterChange()" /> Vehicle</label>
+    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterRefrigerated" (change)="onFilterChange()" /> Refrigerated</label>
+  </div>
+
   <div class="load-banner" *ngIf="loadMessage">{{ loadMessage }}</div>
 
   <div class="table-wrap" *ngIf="rows().length > 0; else empty">
@@ -42,21 +51,10 @@
       </thead>
       <tbody>
         <tr *ngFor="let row of rows(); let i = index">
-          <td *ngFor="let c of columns()">
-            <ng-container *ngIf="editingIndex !== i">{{ row[c] }}</ng-container>
-            <ng-container *ngIf="editingIndex === i">
-              <input class="cell-input" [(ngModel)]="editingRow[c]" />
-            </ng-container>
-          </td>
+          <td *ngFor="let c of columns()">{{ row[c] }}</td>
           <td class="actions">
-            <ng-container *ngIf="editingIndex !== i">
-              <button class="btn small" (click)="startEdit(i)">Edit</button>
-              <button class="btn small danger" (click)="deleteRow(i)">Delete</button>
-            </ng-container>
-            <ng-container *ngIf="editingIndex === i">
-              <button class="btn small" (click)="saveEdit()">Save</button>
-              <button class="btn small" (click)="cancelEdit()">Cancel</button>
-            </ng-container>
+            <button class="btn small" (click)="openEditModal(i)">Edit</button>
+            <button class="btn small danger" (click)="deleteRow(i)">Delete</button>
           </td>
         </tr>
       </tbody>
@@ -72,4 +70,30 @@
   <ng-template #empty>
     <div class="empty">No records found.</div>
   </ng-template>
+
+  <!-- Modal editor -->
+  <div class="modal-backdrop" *ngIf="modalOpen">
+    <div class="modal-dialog" role="dialog" aria-modal="true">
+      <header class="modal-header">
+        <h3>Edit Transport</h3>
+      </header>
+      <div class="modal-body">
+        <form class="modal-fields">
+          <div class="field" *ngFor="let c of columns()">
+            <label>{{ c }}</label>
+            <ng-container *ngIf="isFilterColumn(c); else textField">
+              <label class="checkbox-inline"><input type="checkbox" [checked]="checkboxValue(c)" (change)="setCheckboxValue(c,$event.target.checked)" /> Yes</label>
+            </ng-container>
+            <ng-template #textField>
+              <input [(ngModel)]="modalRow[c]" name="{{c}}" />
+            </ng-template>
+          </div>
+        </form>
+      </div>
+      <footer class="modal-footer">
+        <button class="btn" (click)="saveModalEdit()">Save</button>
+        <button class="btn" (click)="closeEditModal()">Cancel</button>
+      </footer>
+    </div>
+  </div>
 </div>

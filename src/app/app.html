@@ -1,31 +1,48 @@
 
-
-
 <div class="app-shell">
-		<header class="topbar">
-			<div class="brand">
-				<img src="/assets/images/logo.svg" class="logo" alt="Transport App logo" />
-				<div class="title">Transport App</div>
-			</div>
-				<ng-container *ngIf="isAuthenticated; else guest">
-					<nav class="nav">
-						<a routerLink="/transports" routerLinkActive="active">Transports</a>
-						<a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-						<a routerLink="/profile" routerLinkActive="active">Profile</a>
-						<a routerLink="/about" routerLinkActive="active">About</a>
-					</nav>
-					<div class="nav">
-						<a class="btn secondary" (click)="logout()">Logout</a>
-					</div>
-				</ng-container>
-				<ng-template #guest>
-					<div class="nav">
-						<a routerLink="/login" class="btn secondary">Sign in</a>
-					</div>
-				</ng-template>
-	</header>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/assets/images/logo.svg" class="logo" alt="Transport App logo" />
+      <div class="title">Transport App</div>
+    </div>
 
-	<main class="container">
-		<router-outlet></router-outlet>
-	</main>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <nav class="nav">
+        <ng-container *ngIf="!isAuthenticated; else authedLinks">
+          <a routerLink="/home" routerLinkActive="active" (click)="closeMenu()">Home</a>
+          <a routerLink="/login" routerLinkActive="active" (click)="closeMenu()">Login</a>
+        </ng-container>
+        <ng-template #authedLinks>
+          <a routerLink="/profile" routerLinkActive="active" (click)="closeMenu()">My Profile</a>
+          <a (click)="logout(); closeMenu()">Logout</a>
+        </ng-template>
+      </nav>
+
+      <button class="hamburger" (click)="toggleMenu()" aria-label="Toggle menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12h18M3 6h18M3 18h18"></path>
+        </svg>
+      </button>
+
+      <div class="nav">
+        <a *ngIf="!isAuthenticated" routerLink="/login" class="btn secondary">Sign in</a>
+        <a *ngIf="isAuthenticated" class="btn secondary" (click)="logout()">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <div *ngIf="menuOpenValue" class="mobile-menu" (click)="$event.stopPropagation()">
+    <ng-container *ngIf="!isAuthenticated; else mobileAuthed">
+      <a routerLink="/home" (click)="closeMenu()">Home</a>
+      <a routerLink="/login" (click)="closeMenu()">Sign in</a>
+    </ng-container>
+    <ng-template #mobileAuthed>
+      <a routerLink="/profile" (click)="closeMenu()">My Profile</a>
+      <a (click)="logout(); closeMenu()">Logout</a>
+    </ng-template>
+  </div>
+
+  <main class="container">
+    <router-outlet></router-outlet>
+  </main>
 </div>

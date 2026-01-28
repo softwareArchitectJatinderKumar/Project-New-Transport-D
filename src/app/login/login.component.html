@@ -1,32 +1,32 @@
 <div class="auth-page">
   <div class="auth-split card">
     <div class="auth-left">
-      <img src="/assets/images/login-img.svg" alt="Login hero" />
+      <img src="/assets/images/login-hero.svg" alt="Login hero" />
     </div>
     <div class="auth-right">
       <h2>Welcome back</h2>
       <p class="muted">Sign in to continue to Transport App</p>
 
       <div class="form-row">
-        <label>EmailId</label>
-        <input [(ngModel)]="email" placeholder="your email" />
+        <label for="email">Email</label>
+        <input id="email" type="email" [(ngModel)]="email" name="email" placeholder="your@email.com" />
       </div>
 
       <div class="form-row">
-        <label>Password</label>
-        <input type="password" [(ngModel)]="password" placeholder="••••••" />
+        <label for="password">Password</label>
+        <input id="password" type="password" [(ngModel)]="password" name="password" placeholder="••••••" />
       </div>
 
       <div class="form-row">
-        <label>Role</label>
-        <select [(ngModel)]="role">
+        <label for="role">Role</label>
+        <select id="role" [(ngModel)]="role" name="role">
           <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
         </select>
       </div>
 
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
-        <button class="btn" (click)="login()">Sign in</button>
         <button class="btn secondary" (click)="reset()">Reset</button>
+        <button class="btn" (click)="login()">Sign in</button>
       </div>
 
       <div *ngIf="error" class="error" style="margin-top:12px;">{{ error }}</div>

@@ -24,9 +24,25 @@ export class TransportComponent implements OnInit {
   // current search text
   searchText = signal('');
 
+  // advanced filters (match HomeComponent names)
+  filterCrane = false;
+  filterContainer = false;
+  filterFullLoads = false;
+  filterGeneralFreight = false;
+  filterVehicle = false;
+  filterRefrigerated = false;
+
+  // columns to exclude from filter detection (same as Home)
+  private excludedColumns = ['Crane', 'CONTAINER', 'FULL LOADS', 'General freight', 'Vehicle', 'Refridgerated', 'URGENT', 'Senstive Freight', 'CARRIER'];
+
   // editing state
   editingIndex: number | null = null;
   editingRow: any = null;
+
+  // modal editor state (open when editing a full-row in a modal)
+  modalOpen = false;
+  modalRow: any = null;
+  modalGlobalIndex: number | null = null;
 
   // UI state: sorting & pagination
   sortColumn: string | null = null;
@@ -78,8 +94,9 @@ export class TransportComponent implements OnInit {
           this.tryLoadCandidates(paths, idx + 1);
           return;
         }
-        console.info(`Loaded Excel from: ${path}`);
-        this.loadMessage = `Loaded Excel from: ${path}`;
+  console.info(`Loaded Excel from: ${path}`);
+  // don't expose full path to users; show a short generic message or clear it
+  this.loadMessage = null;
         const data = this.excel.read(buffer);
         this.originalData = data;
         this.setRows(data);
@@ -135,7 +152,10 @@ export class TransportComponent implements OnInit {
     // keep original data and initialize columns
     this.originalData = data;
     const cols = new Set<string>();
-    data.forEach((r) => Object.keys(r || {}).forEach((k) => cols.add(k)));
+    data.forEach((r) => Object.keys(r || {}).forEach((k) => {
+      // hide obvious filter indicator columns from the main column list
+      if (!this.excludedColumns.map(c => c.toLowerCase()).includes(String(k).toLowerCase())) cols.add(k);
+    }));
     this.columns.set(Array.from(cols));
 
     // initialize filteredData and apply pipeline
@@ -154,16 +174,44 @@ export class TransportComponent implements OnInit {
     }, 250);
   }
 
+  onFilterChange() {
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
   private applyFilters() {
+    // start with original data
+    let data = this.originalData.slice();
+
+    // apply advanced checkbox filters
+    const activeFilters: string[] = [];
+    if (this.filterCrane) activeFilters.push('CRANE');
+    if (this.filterContainer) activeFilters.push('CONTAINER');
+    if (this.filterFullLoads) activeFilters.push('FULL LOADS');
+    if (this.filterGeneralFreight) activeFilters.push('General freight');
+    if (this.filterVehicle) activeFilters.push('Vehicle');
+    if (this.filterRefrigerated) activeFilters.push('Refridgerated');
+
+    if (activeFilters.length > 0) {
+      data = data.filter((row) =>
+        activeFilters.every((col) => {
+          const val = row[col];
+          return val && (String(val).toLowerCase() === 'yes');
+        })
+      );
+    }
+
+    // apply search
     const t = this.searchText() && this.searchText().trim().toLowerCase();
-    if (!t) this.filteredData = this.originalData.slice();
-    else {
-      this.filteredData = this.originalData.filter((row) =>
+    if (t) {
+      data = data.filter((row) =>
         this.columns()
           .map((c) => (row[c] == null ? '' : String(row[c]).toLowerCase()))
           .some((val) => val.includes(t))
       );
     }
+
+    this.filteredData = data;
 
     // apply sorting
     if (this.sortColumn) {
@@ -217,6 +265,7 @@ export class TransportComponent implements OnInit {
   }
 
   startEdit(i: number) {
+    // Legacy inline edit (kept for backwards compatibility) — prefer modal
     this.editingIndex = i;
     this.editingRow = { ...(this.rows()[i] || {}) };
   }
@@ -268,6 +317,84 @@ export class TransportComponent implements OnInit {
       if (idx >= 0) this.originalData.splice(idx, 1);
     }
     this.applyFilters();
+  }
+
+  // --- Modal editor helpers -------------------------------------------------
+  openEditModal(i: number) {
+    // Find the global index in originalData for this row (rows() items reference originalData)
+    const row = this.rows()[i];
+    const idx = this.originalData.indexOf(row);
+    this.modalGlobalIndex = idx >= 0 ? idx : null;
+    // clone to avoid editing the table directly until Save
+    this.modalRow = { ...(row || {}) };
+    this.modalOpen = true;
+  }
+
+  closeEditModal() {
+    this.modalOpen = false;
+    this.modalRow = null;
+    this.modalGlobalIndex = null;
+  }
+
+  saveModalEdit() {
+    if (!this.modalRow) return;
+
+    // If we have a resolved global index, update directly
+    if (this.modalGlobalIndex != null && this.modalGlobalIndex >= 0 && this.modalGlobalIndex < this.originalData.length) {
+      this.originalData[this.modalGlobalIndex] = this.modalRow;
+    } else {
+      // fallback: try to match by first column key
+      const key = this.columns()[0];
+      if (key) {
+        const j = this.originalData.findIndex((r) => r && String(r[key]) === String(this.modalRow[key]));
+        if (j >= 0) this.originalData[j] = this.modalRow;
+        else this.originalData.push(this.modalRow); // last resort: append
+      } else {
+        this.originalData.push(this.modalRow);
+      }
+    }
+
+    // Re-run filter/sort/pagination pipeline to show updates
+    this.applyFilters();
+    this.closeEditModal();
+  }
+
+  // Helpers for rendering and saving checkbox-based filter columns
+  // Match column names robustly by normalizing (lowercase, remove non-alphanum)
+  private filterColumnKeys = new Set([
+    // common normalized forms for the six filter columns
+    'crane',
+    'container',
+    'fullloads',
+    'full loads',
+    'generalfreight',
+    'vehicle',
+    'refrigerated',
+    // include common misspelling seen in the dataset
+    'refridgerated'
+  ].map(k => this.normalizeKey(k)));
+
+  private normalizeKey(s: string) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  isFilterColumn(col: string) {
+    if (!col) return false;
+    return this.filterColumnKeys.has(this.normalizeKey(col));
+  }
+
+  // Interpret stored value as boolean (treat 'yes' case-insensitive or boolean true as true)
+  checkboxValue(col: string) {
+    if (!this.modalRow) return false;
+    const v = this.modalRow[col];
+    if (v === true) return true;
+    return v != null && String(v).toLowerCase().trim() === 'yes';
+  }
+
+  // Set stored value to 'YES' when checked, otherwise clear string
+  setCheckboxValue(col: string, checked: boolean) {
+    if (!this.modalRow) return;
+    this.modalRow[col] = checked ? 'YES' : '';
   }
 
   // Download current dataset as an updated Excel file

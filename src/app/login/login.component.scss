@@ -9,10 +9,18 @@
 .auth-left img { width:100%; height:auto; max-height:420px; object-fit:cover; border-radius:6px; }
 .auth-right { flex:1 1 50%; padding:28px; display:flex; flex-direction:column; justify-content:center; }
 
-@media (max-width: 768px) {
+.auth-split { display:flex; gap:0; overflow:hidden; align-items:stretch; }
+.auth-left { flex:1 1 50%; display:flex; align-items:center; justify-content:center; padding:0; }
+.auth-left img { width:100%; height:100%; object-fit:cover; display:block; }
+.auth-right { flex:1 1 50%; padding:28px; display:flex; flex-direction:column; justify-content:center; }
+
+/* card-level tweak for better visual */
+.auth-split.card { padding:0; border-radius:12px; overflow:hidden; }
+
+@media (max-width: 900px) {
 	.auth-split { flex-direction:column; }
-	.auth-left { order: -1; padding:10px; }
-	.auth-left img { max-height:200px; }
-	.auth-right { padding:16px; }
+	.auth-left { order: -1; height:220px; }
+	.auth-left img { height:100%; width:100%; }
+	.auth-right { padding:18px; }
 }
 

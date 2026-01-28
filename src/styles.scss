@@ -66,6 +66,27 @@ body {
 	border-radius: 6px;
 }
 .nav a.active, .nav a:hover { background: rgba(255,255,255,0.08); }
+.hamburger {
+	display: none;
+	background: transparent;
+	border: none;
+	color: white;
+	padding: 8px;
+	border-radius: 6px;
+}
+.hamburger svg { width:22px; height:22px; }
+.mobile-menu {
+	position: absolute;
+	top: 64px;
+	right: 12px;
+	background: rgba(15,23,42,0.98);
+	border-radius: 8px;
+	padding: 8px;
+	box-shadow: 0 10px 30px rgba(2,6,23,0.3);
+	z-index: 80;
+}
+.mobile-menu a { display:block; padding:8px 12px; color:white; text-decoration:none; }
+.mobile-menu a:hover { background: rgba(255,255,255,0.04); }
 .container {
 	max-width: var(--max-width);
 	margin: 18px auto;
@@ -102,10 +123,16 @@ body {
 /* Responsive small screens */
 @media (max-width: 640px) {
 	.nav { display: none; }
+	.hamburger { display: inline-flex; }
 	.container { width: calc(100% - 24px); }
 	.topbar { padding: 12px; }
 }
 
 /* Utility */
 .muted { color: var(--muted); }
+
+/* responsive table helpers */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; min-width: 600px; }
+table th, table td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; text-align: left; }
 

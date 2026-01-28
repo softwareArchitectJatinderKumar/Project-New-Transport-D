@@ -5,9 +5,11 @@ import { authGuard } from './auth/auth.guard';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AboutComponent } from './about/about.component';
+import { HomeComponent } from './home/home.component';
 
 export const routes: Routes = [
-	{ path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+	{ path: '', redirectTo: 'home', pathMatch: 'full' },
+	{ path: 'home', component: HomeComponent },
 	{ path: 'login', component: LoginComponent },
 	{ path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
 	{ path: 'profile', component: ProfileComponent },
