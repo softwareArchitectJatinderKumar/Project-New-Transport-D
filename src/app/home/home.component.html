@@ -1,0 +1,79 @@
+<div class="container-fluid">
+  <header class="toolbar">
+    <h2>Transport Data</h2>
+    <div class="toolbar-controls">
+      <input class="search" placeholder="Search across all columns..." (input)="onSearchChange($event.target.value)" />
+      <div class="filters">
+        <label class="filter-checkbox">
+          <input type="checkbox" [(ngModel)]="filterCrane" (change)="onFilterChange()" />
+          Crane
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" [(ngModel)]="filterContainer" (change)="onFilterChange()" />
+          Container
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" [(ngModel)]="filterFullLoads" (change)="onFilterChange()" />
+          Full Loads
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" [(ngModel)]="filterGeneralFreight" (change)="onFilterChange()" />
+          General Freight
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" [(ngModel)]="filterVehicle" (change)="onFilterChange()" />
+          Vehicle
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" [(ngModel)]="filterRefrigerated" (change)="onFilterChange()" />
+          Refrigerated
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <div class="meta">
+    <div>Showing: {{ filteredData.length }} total, page {{ currentPage }} / {{ totalPages }}</div>
+    <div>
+      Page size:
+      <select (change)="$any($event.target).value && setPageSize($any($event.target).value)" [value]="pageSize">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="load-banner" *ngIf="loadMessage">{{ loadMessage }}</div>
+
+  <div class="table-wrap" *ngIf="rows().length > 0; else empty">
+    <table>
+      <thead>
+        <tr>
+          <th *ngFor="let c of columns()" (click)="toggleSort(c)" class="sortable">
+            {{ c }}
+            <span class="sort-indicator" *ngIf="sortColumn === c">{{ sortDirection === 'asc' ? '▲' : sortDirection === 'desc' ? '▼' : '' }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows(); let i = index">
+          <td *ngFor="let c of columns()">
+            {{ row[c] }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pagination">
+      <button class="btn" (click)="changePage(-1)">Prev</button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button class="btn" (click)="changePage(1)">Next</button>
+    </div>
+  </div>
+
+  <ng-template #empty>
+    <div class="empty">No records found.</div>
+  </ng-template>
+</div>
