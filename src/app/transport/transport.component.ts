@@ -2,7 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ExcelService } from '../excel/excel.service';
 import { AuthService } from '../auth/auth.service';
 
@@ -57,7 +57,20 @@ export class TransportComponent implements OnInit {
   loadMessage: string | null = null;
   loadError: string | null = null;
 
-  constructor(private http: HttpClient, private excel: ExcelService, private auth: AuthService, private router: Router) {}
+  // keep a pending edit request if navigated with query params before data loads
+  private pendingEdit: { key: string; value: string } | null = null;
+
+  constructor(private http: HttpClient, private excel: ExcelService, private auth: AuthService, private router: Router, private route: ActivatedRoute) {
+    // capture query params so we can open modal after the data finishes loading
+    this.route.queryParams.subscribe((p) => {
+      // support either editKey/editValue or editByEmail for convenience
+      if (p['editKey'] && p['editValue']) {
+        this.pendingEdit = { key: p['editKey'], value: p['editValue'] };
+      } else if (p['editByEmail'] && p['editByEmail'].length) {
+        this.pendingEdit = { key: 'Email', value: p['editByEmail'] };
+      }
+    });
+  }
 
   ngOnInit(): void {
     // load file from assets
@@ -162,6 +175,29 @@ export class TransportComponent implements OnInit {
     this.filteredData = this.originalData.slice();
     this.currentPage = 1;
     this.applyFilters();
+
+    // If navigation requested an immediate edit (from Profile), attempt to open modal
+    setTimeout(() => this.checkPendingEdit(), 20);
+  }
+
+  private checkPendingEdit() {
+    if (!this.pendingEdit) return;
+    const { key, value } = this.pendingEdit;
+    this.pendingEdit = null;
+    if (!key) return;
+
+    const idx = this.originalData.findIndex((r) => {
+      if (!r) return false;
+      const v = r[key];
+      if (v == null) return false;
+      return String(v).toLowerCase() === String(value).toLowerCase();
+    });
+    if (idx >= 0) {
+      // open modal by global index
+      this.openEditModalByGlobalIndex(idx);
+      // remove query params from URL for cleanliness
+      try { this.router.navigate([], { queryParams: {} }); } catch (e) { /* ignore */ }
+    }
   }
 
   onSearchChange(text: string) {
@@ -330,6 +366,13 @@ export class TransportComponent implements OnInit {
     this.modalOpen = true;
   }
 
+  openEditModalByGlobalIndex(globalIndex: number) {
+    if (globalIndex == null || globalIndex < 0 || globalIndex >= this.originalData.length) return;
+    this.modalGlobalIndex = globalIndex;
+    this.modalRow = { ...(this.originalData[globalIndex] || {}) };
+    this.modalOpen = true;
+  }
+
   closeEditModal() {
     this.modalOpen = false;
     this.modalRow = null;
@@ -359,6 +402,25 @@ export class TransportComponent implements OnInit {
     this.closeEditModal();
   }
 
+  // Return the list of columns to render in the modal editor.
+  // Use keys present on modalRow so excluded filter columns are included.
+  modalColumns(): string[] {
+    if (!this.modalRow) return [];
+    const keys = Object.keys(this.modalRow || {});
+    // Preserve the common column ordering where possible (columns())
+    const ordered: string[] = [];
+    const mainCols = new Set(this.columns());
+    // Add columns that are both in columns() and modalRow in the columns() order
+    this.columns().forEach((c) => {
+      if (keys.includes(c)) ordered.push(c);
+    });
+    // Add any remaining keys that weren't part of columns()
+    keys.forEach((k) => {
+      if (!mainCols.has(k)) ordered.push(k);
+    });
+    return ordered;
+  }
+
   // Helpers for rendering and saving checkbox-based filter columns
   // Match column names robustly by normalizing (lowercase, remove non-alphanum)
   private filterColumnKeys = new Set([
@@ -370,6 +432,9 @@ export class TransportComponent implements OnInit {
     'generalfreight',
     'vehicle',
     'refrigerated',
+    'urgent',
+    'sensitive freight',
+    'senstive freight',
     // include common misspelling seen in the dataset
     'refridgerated'
   ].map(k => this.normalizeKey(k)));

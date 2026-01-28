@@ -53,8 +53,13 @@
         <tr *ngFor="let row of rows(); let i = index">
           <td *ngFor="let c of columns()">{{ row[c] }}</td>
           <td class="actions">
-            <button class="btn small" (click)="openEditModal(i)">Edit</button>
-            <button class="btn small danger" (click)="deleteRow(i)">Delete</button>
+            <ng-container *ngIf="currentUser; else signedOutActions">
+              <button class="btn small" (click)="openEditModal(i)">Edit</button>
+              <button class="btn small danger" (click)="deleteRow(i)">Delete</button>
+            </ng-container>
+            <ng-template #signedOutActions>
+              <span class="small muted">Sign in to edit</span>
+            </ng-template>
           </td>
         </tr>
       </tbody>
@@ -79,7 +84,7 @@
       </header>
       <div class="modal-body">
         <form class="modal-fields">
-          <div class="field" *ngFor="let c of columns()">
+          <div class="field" *ngFor="let c of modalColumns()">
             <label>{{ c }}</label>
             <ng-container *ngIf="isFilterColumn(c); else textField">
               <label class="checkbox-inline"><input type="checkbox" [checked]="checkboxValue(c)" (change)="setCheckboxValue(c,$event.target.checked)" /> Yes</label>

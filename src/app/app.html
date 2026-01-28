@@ -14,6 +14,7 @@
         </ng-container>
         <ng-template #authedLinks>
           <a routerLink="/profile" routerLinkActive="active" (click)="closeMenu()">My Profile</a>
+          <a routerLink="/transports" routerLinkActive="active" (click)="closeMenu()">Transports</a>
           <a (click)="logout(); closeMenu()">Logout</a>
         </ng-template>
       </nav>

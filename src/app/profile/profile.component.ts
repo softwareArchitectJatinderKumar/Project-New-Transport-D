@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
 @Component({
   standalone: true,
   selector: 'app-profile',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="container-fluid mt-4">
       <div class="row">
@@ -28,7 +29,9 @@ import { AuthService } from '../auth/auth.service';
                     <div class="card-body">
                       <h5 class="card-title">Quick Actions</h5>
                       <a routerLink="/dashboard" class="btn btn-primary me-2">Go to Dashboard</a>
-                      <a routerLink="/transports" class="btn btn-secondary">View Transports</a>
+                      <a routerLink="/transports" class="btn btn-secondary me-2">View Transports</a>
+                      <!-- Navigate to transports and request modal open for the row matching user's email -->
+                      <a [routerLink]="['/transports']" [queryParams]="{ editByEmail: user && user.email }" class="btn btn-outline-primary">Edit my transport</a>
                     </div>
                   </div>
                 </div>
