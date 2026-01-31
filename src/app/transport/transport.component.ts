@@ -26,7 +26,7 @@ export class TransportComponent implements OnInit {
 
   // API server URL configuration
   private readonly SERVER_PORT = 3000;
-  private readonly API_URL = typeof window !== 'undefined' && (window as any).ENV?.API_URL || `http://localhost:${this.SERVER_PORT}`;
+  private readonly API_URL = typeof window !== 'undefined' && (window as any).ENV?.API_URL || '/api';
   private get serverUrl(): string {
     return this.API_URL;
   }
