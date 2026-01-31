@@ -1,30 +1,53 @@
-// Vercel KV Database for Transport App
-// Uses Redis on Vercel, falls back to in-memory for local development
+// Supabase Database for Transport App
+// Free tier: 500MB database
 
 const DATA_KEY = 'transport-data';
 
-// Try to use Vercel KV if available
-let kv;
+// Try to use Supabase if configured
+let supabase;
 try {
-  kv = require('@vercel/kv');
+  supabase = require('@supabase/supabase-js');
 } catch (e) {
-  // KV not available (local development)
-  kv = null;
+  supabase = null;
 }
 
-// In-memory storage for local development
+// Supabase config (set these in Vercel environment variables)
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+
+// In-memory storage for local development (fallback)
 let memoryStore = [
   { LOCATION: 'Sample Location 1', PHONE: '123-456-7890', CONTACT: 'John Doe' },
   { LOCATION: 'Sample Location 2', PHONE: '098-765-4321', CONTACT: 'Jane Smith' }
 ];
 
+let supabaseClient = null;
+
+if (supabase && SUPABASE_URL && SUPABASE_KEY) {
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log('Using Supabase for data storage');
+}
+
 export async function getData() {
-  if (kv) {
+  if (supabaseClient) {
     try {
-      const data = await kv.get(DATA_KEY);
-      return data || null;
+      const { data, error } = await supabaseClient
+        .from('app_data')
+        .select('data')
+        .eq('key', DATA_KEY)
+        .single();
+      
+      if (error) {
+        console.error('Supabase error:', error.message);
+        return null;
+      }
+      
+      if (data && data.data) {
+        return data.data;
+      }
+      return null;
     } catch (error) {
-      console.error('Error getting data from KV:', error);
+      console.error('Error getting data from Supabase:', error);
       return null;
     }
   } else {
@@ -34,12 +57,20 @@ export async function getData() {
 }
 
 export async function setData(data) {
-  if (kv) {
+  if (supabaseClient) {
     try {
-      await kv.set(DATA_KEY, data);
+      // Upsert - update if exists, insert if not
+      const { error } = await supabaseClient
+        .from('app_data')
+        .upsert({ key: DATA_KEY, data: data, updated_at: new Date().toISOString() });
+      
+      if (error) {
+        console.error('Supabase error:', error.message);
+        return false;
+      }
       return true;
     } catch (error) {
-      console.error('Error saving data to KV:', error);
+      console.error('Error saving data to Supabase:', error);
       return false;
     }
   } else {
