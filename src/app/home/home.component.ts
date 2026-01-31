@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -22,6 +22,11 @@ export class HomeComponent implements OnInit {
   // current search text
   searchText = signal('');
 
+  // Columns to always show on small screens
+  private readonly SMALL_SCREEN_COLUMNS = ['LOCATION', 'PHONE'];
+  // Columns to show on all screens
+  private readonly PRIORITY_COLUMNS = ['LOCATION', 'PHONE', 'CONTACT'];
+
   // advanced filters
   filterCrane = false;
   filterContainer = false;
@@ -29,6 +34,8 @@ export class HomeComponent implements OnInit {
   filterGeneralFreight = false;
   filterVehicle = false;
   filterRefrigerated = false;
+  filterUrgent = false;
+  filterSensitive = false;
 
   // UI state: sorting & pagination
   sortColumn: string | null = null;
@@ -45,7 +52,14 @@ export class HomeComponent implements OnInit {
 
   // excluded columns for filters
   private excludedColumns = ['Crane', 'CONTAINER', 'FULL LOADS', 'General freight', 'Vehicle', 'Refridgerated', 'URGENT', 'Senstive Freight', 'CARRIER'];
+  // UI: control visibility of the responsive filter bar on small screens
+  filtersOpen = false;
   // private excludedColumns = ['CRANE/INPUT', 'CONTAINER/INPUT', 'FULL LOADS/INPUT', 'General freight/INPUT', 'Vehicle/INPUT', 'Refridgerated', 'URGENT', 'Senstive Freight', 'CARRIER/OUTPUT'];
+
+  // bound listener so we can add/remove it
+  private onKeydownBound = (e: KeyboardEvent) => this.onKeydown(e);
+  // bound document click/touch listener to close filters when clicking outside
+  private onDocumentClickBound = (e: Event) => this.onDocumentClick(e);
 
   constructor(private http: HttpClient, private excel: ExcelService) {}
 
@@ -59,6 +73,52 @@ export class HomeComponent implements OnInit {
     ];
 
     this.tryLoadCandidates(candidates, 0);
+    // attach escape listener to close filter bar on devices with keyboards
+    try { window.addEventListener('keydown', this.onKeydownBound); } catch (e) { /* ignore */ }
+    // attach click/touch listeners (capture) so taps outside the filter bar close it on mobile/tablets
+    try {
+      document.addEventListener('click', this.onDocumentClickBound, true);
+      document.addEventListener('touchstart', this.onDocumentClickBound, true);
+    } catch (e) { /* ignore */ }
+  }
+
+  ngOnDestroy(): void {
+    try { window.removeEventListener('keydown', this.onKeydownBound); } catch (e) { /* ignore */ }
+    try {
+      document.removeEventListener('click', this.onDocumentClickBound, true);
+      document.removeEventListener('touchstart', this.onDocumentClickBound, true);
+    } catch (e) { /* ignore */ }
+  }
+
+  private onKeydown(e: KeyboardEvent) {
+    if (!this.filtersOpen) return;
+    const key = e.key || (e as any).code || '';
+    if (key === 'Escape' || key === 'Esc') {
+      this.filtersOpen = false;
+      // prevent further handling
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }
+
+  private onDocumentClick(e: Event) {
+    if (!this.filtersOpen) return;
+    try {
+      const target = (e.target || null) as HTMLElement | null;
+      if (!target) {
+        this.filtersOpen = false;
+        return;
+      }
+      // If click/touch happened inside the filter bar or on the toggle control, do nothing
+      if (target.closest && (target.closest('.filter-bar') || target.closest('.filter-toggle') || target.closest('[data-filter-toggle]'))) {
+        return;
+      }
+      // otherwise close the filters
+      this.filtersOpen = false;
+    } catch (err) {
+      // best-effort: close filters if anything goes wrong
+      this.filtersOpen = false;
+    }
   }
 
   private tryLoadCandidates(paths: string[], idx: number) {
@@ -164,6 +224,7 @@ export class HomeComponent implements OnInit {
     if (this.filterGeneralFreight) activeFilters.push('General freight');
     if (this.filterVehicle) activeFilters.push('Vehicle');
     if (this.filterRefrigerated) activeFilters.push('Refridgerated');
+    if (this.filterUrgent) activeFilters.push('URGENT');
 
     if (activeFilters.length > 0) {
       data = data.filter((row) =>
@@ -172,6 +233,14 @@ export class HomeComponent implements OnInit {
           return val && ( val === 'YES' || val === 'YES' || String(val).toLowerCase() === 'yes');
         })
       );
+    }
+
+    if (this.filterSensitive) {
+      data = data.filter((row) => {
+        const v1 = row['Senstive Freight'];
+        const v2 = row['Sensitive Freight'];
+        return ((v1 != null && String(v1).toLowerCase() === 'yes') || (v2 != null && String(v2).toLowerCase() === 'yes'));
+      });
     }
 
     // apply search
@@ -235,5 +304,34 @@ export class HomeComponent implements OnInit {
       this.sortDirection = 'asc';
     }
     this.applyFilters();
+  }
+
+  /**
+   * Get columns to display in table based on screen size
+   * Small screens: show only Location, Phone
+   * Large screens: show Location, Phone, Contact
+   */
+  getTableColumns(): string[] {
+    const allColumns = this.columns();
+    const isSmallScreen = window.innerWidth < 720;
+    
+    if (isSmallScreen) {
+      // On small screens, show only LOCATION and PHONE
+      return allColumns.filter(c => 
+        this.SMALL_SCREEN_COLUMNS.some(sc => 
+          c.toLowerCase().includes(sc.toLowerCase())
+        )
+      );
+    }
+    
+    // On large screens, prioritize LOCATION, PHONE, CONTACT
+    const priority = allColumns.filter(c => 
+      this.PRIORITY_COLUMNS.some(pc => 
+        c.toLowerCase().includes(pc.toLowerCase())
+      )
+    );
+    
+    // If priority columns found, use them; otherwise show all
+    return priority.length > 0 ? priority : allColumns;
   }
 }

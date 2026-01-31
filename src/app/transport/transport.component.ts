@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -24,6 +24,18 @@ export class TransportComponent implements OnInit {
   // current search text
   searchText = signal('');
 
+  // API server URL configuration
+  private readonly SERVER_PORT = 3000;
+  private readonly API_URL = typeof window !== 'undefined' && (window as any).ENV?.API_URL || `http://localhost:${this.SERVER_PORT}`;
+  private get serverUrl(): string {
+    return this.API_URL;
+  }
+
+  // Columns to always show on small screens
+  private readonly SMALL_SCREEN_COLUMNS = ['LOCATION', 'PHONE'];
+  // Columns to show on all screens
+  private readonly PRIORITY_COLUMNS = ['LOCATION', 'PHONE', 'CONTACT'];
+
   // advanced filters (match HomeComponent names)
   filterCrane = false;
   filterContainer = false;
@@ -31,6 +43,9 @@ export class TransportComponent implements OnInit {
   filterGeneralFreight = false;
   filterVehicle = false;
   filterRefrigerated = false;
+  // additional filters
+  filterUrgent = false;
+  filterSensitive = false;
 
   // columns to exclude from filter detection (same as Home)
   private excludedColumns = ['Crane', 'CONTAINER', 'FULL LOADS', 'General freight', 'Vehicle', 'Refridgerated', 'URGENT', 'Senstive Freight', 'CARRIER'];
@@ -43,6 +58,10 @@ export class TransportComponent implements OnInit {
   modalOpen = false;
   modalRow: any = null;
   modalGlobalIndex: number | null = null;
+  isAddMode = false;
+
+  // Filter bar state
+  filtersCollapsed = false;
 
   // UI state: sorting & pagination
   sortColumn: string | null = null;
@@ -56,6 +75,14 @@ export class TransportComponent implements OnInit {
   // UI/load status
   loadMessage: string | null = null;
   loadError: string | null = null;
+
+  // control visibility of responsive filter bar
+  filtersOpen = false;
+  saveStatus: string | null = null;
+  // bound key listener reference so we can remove it on destroy
+  private onKeydownBound = (e: KeyboardEvent) => this.onKeydown(e);
+  // bound document click/touch listener to close filters when clicking outside
+  private onDocumentClickBound = (e: Event) => this.onDocumentClick(e);
 
   // keep a pending edit request if navigated with query params before data loads
   private pendingEdit: { key: string; value: string } | null = null;
@@ -73,52 +100,96 @@ export class TransportComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // load file from assets
-    // The dev server may serve static files from different locations (for example Vite serves the
-    // `public/` directory at root). We'll try multiple candidate paths so the app works whether the
-    // file is placed under src/assets or public.
-    const candidates = [
-      'assets/Data/DataTransportsFile-updated.xlsx', // typical Angular assets path
-      '/assets/Data/DataTransportsFile-updated.xlsx',
-      '/Data/DataTransportsFile-updated.xlsx', // Vite public/Data
-      'Data/DataTransportsFile-updated.xlsx'
-    ];
+    // Check if server is available
+    this.checkServerHealth();
 
-    this.tryLoadCandidates(candidates, 0);
-  }
+    // Use the server API endpoint to load the Excel file
+    const excelUrl = `${this.serverUrl}/api/excel`;
 
-  private tryLoadCandidates(paths: string[], idx: number) {
-    if (idx >= paths.length) {
-      const msg = 'Unable to locate a valid XLSX file at any of the candidate paths.';
-      console.error(msg, paths);
-      console.error('Place the file at src/assets/Data/DataTransportsFile-updated.xlsx or public/Data/DataTransportsFile-updated.xlsx and restart the dev server.');
-      this.loadError = msg + ' See console for candidate paths tried.';
-      this.loadMessage = null;
-      this.originalData = [];
-      this.setRows([]);
-      return;
-    }
-
-    const path = paths[idx];
-    this.http.get(path, { responseType: 'arraybuffer' }).subscribe(
+    this.http.get(excelUrl, { responseType: 'arraybuffer' }).subscribe(
       (buffer) => {
         if (!this.isXlsx(buffer)) {
-          console.warn(`${path} returned content that is not a valid XLSX; trying next candidate...`);
-          this.tryLoadCandidates(paths, idx + 1);
+          console.error('Loaded file is not a valid XLSX');
+          this.loadError = 'File is not a valid Excel file';
+          this.originalData = [];
+          this.setRows([]);
           return;
         }
-  console.info(`Loaded Excel from: ${path}`);
-  // don't expose full path to users; show a short generic message or clear it
-  this.loadMessage = null;
+        this.loadMessage = null;
         const data = this.excel.read(buffer);
         this.originalData = data;
         this.setRows(data);
-      }, (err) => {
-        console.warn(`GET ${path} failed:`, err, 'Trying next candidate...');
-        this.loadMessage = `GET ${path} failed; trying next candidate...`;
-        this.tryLoadCandidates(paths, idx + 1);
+      },
+      (err) => {
+        console.error('Failed to load Excel file:', err);
+        this.loadError = 'Failed to load Excel file. Ensure server is running on port ' + this.SERVER_PORT;
+        this.originalData = [];
+        this.setRows([]);
       }
     );
+    // listen for Escape key to close filter bar on devices/browsers that support it
+    try { window.addEventListener('keydown', this.onKeydownBound); } catch (e) { /* ignore */ }
+    // listen for clicks/touches outside the filter bar to close it on mobile/tablets
+    try {
+      document.addEventListener('click', this.onDocumentClickBound, true);
+      document.addEventListener('touchstart', this.onDocumentClickBound, true);
+    } catch (e) { /* ignore */ }
+  }
+
+  ngOnDestroy(): void {
+    try { window.removeEventListener('keydown', this.onKeydownBound); } catch (e) { /* ignore */ }
+    try {
+      document.removeEventListener('click', this.onDocumentClickBound, true);
+      document.removeEventListener('touchstart', this.onDocumentClickBound, true);
+    } catch (e) { /* ignore */ }
+  }
+
+  private onKeydown(e: KeyboardEvent) {
+    if (!this.filtersOpen) return;
+    const key = e.key || (e as any).code || '';
+    if (key === 'Escape' || key === 'Esc') {
+      this.filtersOpen = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }
+
+  private onDocumentClick(e: Event) {
+    if (!this.filtersOpen) return;
+    try {
+      const target = (e.target || null) as HTMLElement | null;
+      if (!target) {
+        this.filtersOpen = false;
+        return;
+      }
+      // If click/touch happened inside the filter bar or on the toggle control, do nothing
+      if (target.closest && (target.closest('.filter-bar') || target.closest('.filter-toggle') || target.closest('[data-filter-toggle]'))) {
+        return;
+      }
+      // otherwise close the filters
+      this.filtersOpen = false;
+    } catch (err) {
+      this.filtersOpen = false;
+    }
+  }
+
+  /**
+   * Check if the server is available
+   */
+  private checkServerHealth() {
+    const healthUrl = `${this.serverUrl}/api/health`;
+
+    fetch(healthUrl)
+      .then(response => {
+        if (response.ok) {
+          console.log('Server is available at', healthUrl);
+        }
+      })
+      .catch(err => {
+        console.warn('Server not available at', healthUrl, err);
+        this.saveStatus = 'Warning: Server not available. Save may not work.';
+        setTimeout(() => this.saveStatus = null, 5000);
+      });
   }
 
   logout() {
@@ -149,8 +220,6 @@ export class TransportComponent implements OnInit {
       this.setRows([]);
     });
   }
-
-  // Quick check to see whether an ArrayBuffer looks like an XLSX (ZIP) file by checking for PK\x03\x04 header
   private isXlsx(buf: ArrayBuffer | any): boolean {
     try {
       if (!buf || !(buf instanceof ArrayBuffer)) return false;
@@ -162,21 +231,16 @@ export class TransportComponent implements OnInit {
   }
 
   private setRows(data: any[]) {
-    // keep original data and initialize columns
     this.originalData = data;
     const cols = new Set<string>();
     data.forEach((r) => Object.keys(r || {}).forEach((k) => {
-      // hide obvious filter indicator columns from the main column list
       if (!this.excludedColumns.map(c => c.toLowerCase()).includes(String(k).toLowerCase())) cols.add(k);
     }));
     this.columns.set(Array.from(cols));
 
-    // initialize filteredData and apply pipeline
     this.filteredData = this.originalData.slice();
     this.currentPage = 1;
     this.applyFilters();
-
-    // If navigation requested an immediate edit (from Profile), attempt to open modal
     setTimeout(() => this.checkPendingEdit(), 20);
   }
 
@@ -193,15 +257,12 @@ export class TransportComponent implements OnInit {
       return String(v).toLowerCase() === String(value).toLowerCase();
     });
     if (idx >= 0) {
-      // open modal by global index
       this.openEditModalByGlobalIndex(idx);
-      // remove query params from URL for cleanliness
       try { this.router.navigate([], { queryParams: {} }); } catch (e) { /* ignore */ }
     }
   }
 
   onSearchChange(text: string) {
-    // debounce search for better UX
     if (this.searchDebounce) clearTimeout(this.searchDebounce);
     this.searchDebounce = setTimeout(() => {
       this.searchText.set(text);
@@ -216,10 +277,8 @@ export class TransportComponent implements OnInit {
   }
 
   private applyFilters() {
-    // start with original data
     let data = this.originalData.slice();
 
-    // apply advanced checkbox filters
     const activeFilters: string[] = [];
     if (this.filterCrane) activeFilters.push('CRANE');
     if (this.filterContainer) activeFilters.push('CONTAINER');
@@ -227,6 +286,7 @@ export class TransportComponent implements OnInit {
     if (this.filterGeneralFreight) activeFilters.push('General freight');
     if (this.filterVehicle) activeFilters.push('Vehicle');
     if (this.filterRefrigerated) activeFilters.push('Refridgerated');
+  if (this.filterUrgent) activeFilters.push('URGENT');
 
     if (activeFilters.length > 0) {
       data = data.filter((row) =>
@@ -237,7 +297,15 @@ export class TransportComponent implements OnInit {
       );
     }
 
-    // apply search
+    // Special-case: Sensitive Freight may have inconsistent header spelling.
+    if (this.filterSensitive) {
+      data = data.filter((row) => {
+        const v1 = row['Senstive Freight'];
+        const v2 = row['Sensitive Freight'];
+        return ((v1 != null && String(v1).toLowerCase() === 'yes') || (v2 != null && String(v2).toLowerCase() === 'yes'));
+      });
+    }
+
     const t = this.searchText() && this.searchText().trim().toLowerCase();
     if (t) {
       data = data.filter((row) =>
@@ -249,7 +317,6 @@ export class TransportComponent implements OnInit {
 
     this.filteredData = data;
 
-    // apply sorting
     if (this.sortColumn) {
       const col = this.sortColumn;
       const dir = this.sortDirection === 'asc' ? 1 : -1;
@@ -264,7 +331,6 @@ export class TransportComponent implements OnInit {
       });
     }
 
-    // apply pagination
     const start = (this.currentPage - 1) * this.pageSize;
     const page = this.filteredData.slice(start, start + this.pageSize);
     this.rows.set(page);
@@ -301,7 +367,6 @@ export class TransportComponent implements OnInit {
   }
 
   startEdit(i: number) {
-    // Legacy inline edit (kept for backwards compatibility) — prefer modal
     this.editingIndex = i;
     this.editingRow = { ...(this.rows()[i] || {}) };
   }
@@ -317,12 +382,10 @@ export class TransportComponent implements OnInit {
     updated[this.editingIndex] = this.editingRow;
     this.rows.set(updated);
 
-    // also update originalData so edits persist across searches
     const globalIndex = this.originalData.indexOf(this.rows()[this.editingIndex]);
     if (globalIndex >= 0) {
       this.originalData[globalIndex] = this.editingRow;
     } else {
-      // best-effort: try to match by a unique key like first column
       const key = this.columns()[0];
       if (key) {
         const idx = this.originalData.findIndex((r) => r[key] === this.editingRow[key]);
@@ -330,8 +393,6 @@ export class TransportComponent implements OnInit {
       }
     }
 
-    // update underlying originalData and refresh pipeline
-    // try to match by identity or by first column
     const key = this.columns()[0];
     if (key) {
       const idx = this.originalData.findIndex((r) => r[key] === this.editingRow[key]);
@@ -343,7 +404,6 @@ export class TransportComponent implements OnInit {
 
   deleteRow(i: number) {
     const r = this.rows()[i];
-    // remove from originalData by matching first column if possible
     const key = this.columns()[0];
     if (key) {
       const j = this.originalData.findIndex((x) => x[key] === r[key]);
@@ -355,14 +415,23 @@ export class TransportComponent implements OnInit {
     this.applyFilters();
   }
 
-  // --- Modal editor helpers -------------------------------------------------
   openEditModal(i: number) {
-    // Find the global index in originalData for this row (rows() items reference originalData)
     const row = this.rows()[i];
     const idx = this.originalData.indexOf(row);
     this.modalGlobalIndex = idx >= 0 ? idx : null;
-    // clone to avoid editing the table directly until Save
     this.modalRow = { ...(row || {}) };
+    this.modalOpen = true;
+  }
+
+  openAddModal() {
+    this.isAddMode = true;
+    const template: any = {};
+    this.columns().forEach((c) => (template[c] = ''));
+    (this.excludedColumns || []).forEach((c) => {
+      if (!(c in template)) template[c] = '';
+    });
+    this.modalRow = template;
+    this.modalGlobalIndex = null;
     this.modalOpen = true;
   }
 
@@ -379,14 +448,16 @@ export class TransportComponent implements OnInit {
     this.modalGlobalIndex = null;
   }
 
+  toggleFilters() {
+    this.filtersCollapsed = !this.filtersCollapsed;
+  }
+
   saveModalEdit() {
     if (!this.modalRow) return;
 
-    // If we have a resolved global index, update directly
     if (this.modalGlobalIndex != null && this.modalGlobalIndex >= 0 && this.modalGlobalIndex < this.originalData.length) {
       this.originalData[this.modalGlobalIndex] = this.modalRow;
     } else {
-      // fallback: try to match by first column key
       const key = this.columns()[0];
       if (key) {
         const j = this.originalData.findIndex((r) => r && String(r[key]) === String(this.modalRow[key]));
@@ -397,34 +468,48 @@ export class TransportComponent implements OnInit {
       }
     }
 
-    // Re-run filter/sort/pagination pipeline to show updates
     this.applyFilters();
+    if (this.isAddMode) {
+      this.isAddMode = false;
+      this.currentPage = this.totalPages;
+    }
+    // Save to server using ExcelService
+    this.excel.saveToServer(this.originalData);
+    this.saveStatus = 'Record saved successfully!';
+    setTimeout(() => this.saveStatus = null, 3000);
     this.closeEditModal();
   }
 
-  // Return the list of columns to render in the modal editor.
-  // Use keys present on modalRow so excluded filter columns are included.
+  saveAddModal() {
+    if (!this.modalRow) return;
+    // clone modalRow to avoid accidental shared references
+    const newRow = { ...(this.modalRow || {}) };
+    this.originalData.push(newRow);
+    this.isAddMode = false;
+    this.currentPage = Math.max(1, Math.ceil((this.originalData.length || 1) / this.pageSize));
+    this.applyFilters();
+    // Save to server using ExcelService
+    this.excel.saveToServer(this.originalData);
+    this.saveStatus = 'New record saved successfully!';
+    setTimeout(() => this.saveStatus = null, 3000);
+    this.closeEditModal();
+  }
+
   modalColumns(): string[] {
     if (!this.modalRow) return [];
     const keys = Object.keys(this.modalRow || {});
-    // Preserve the common column ordering where possible (columns())
     const ordered: string[] = [];
     const mainCols = new Set(this.columns());
-    // Add columns that are both in columns() and modalRow in the columns() order
     this.columns().forEach((c) => {
       if (keys.includes(c)) ordered.push(c);
     });
-    // Add any remaining keys that weren't part of columns()
     keys.forEach((k) => {
       if (!mainCols.has(k)) ordered.push(k);
     });
     return ordered;
   }
 
-  // Helpers for rendering and saving checkbox-based filter columns
-  // Match column names robustly by normalizing (lowercase, remove non-alphanum)
   private filterColumnKeys = new Set([
-    // common normalized forms for the six filter columns
     'crane',
     'container',
     'fullloads',
@@ -435,7 +520,6 @@ export class TransportComponent implements OnInit {
     'urgent',
     'sensitive freight',
     'senstive freight',
-    // include common misspelling seen in the dataset
     'refridgerated'
   ].map(k => this.normalizeKey(k)));
 
@@ -448,7 +532,35 @@ export class TransportComponent implements OnInit {
     return this.filterColumnKeys.has(this.normalizeKey(col));
   }
 
-  // Interpret stored value as boolean (treat 'yes' case-insensitive or boolean true as true)
+  /**
+   * Get columns to display in table based on screen size
+   * Small screens: show only Location, Phone
+   * Large screens: show Location, Phone, Contact
+   */
+  getTableColumns(): string[] {
+    const allColumns = this.columns();
+    const isSmallScreen = window.innerWidth < 720;
+    
+    if (isSmallScreen) {
+      // On small screens, show only LOCATION and PHONE
+      return allColumns.filter(c => 
+        this.SMALL_SCREEN_COLUMNS.some(sc => 
+          c.toLowerCase().includes(sc.toLowerCase())
+        )
+      );
+    }
+    
+    // On large screens, prioritize LOCATION, PHONE, CONTACT
+    const priority = allColumns.filter(c => 
+      this.PRIORITY_COLUMNS.some(pc => 
+        c.toLowerCase().includes(pc.toLowerCase())
+      )
+    );
+    
+    // If priority columns found, use them; otherwise show all
+    return priority.length > 0 ? priority : allColumns;
+  }
+
   checkboxValue(col: string) {
     if (!this.modalRow) return false;
     const v = this.modalRow[col];
@@ -456,23 +568,101 @@ export class TransportComponent implements OnInit {
     return v != null && String(v).toLowerCase().trim() === 'yes';
   }
 
-  // Set stored value to 'YES' when checked, otherwise clear string
   setCheckboxValue(col: string, checked: boolean) {
     if (!this.modalRow) return;
     this.modalRow[col] = checked ? 'YES' : '';
   }
 
-  // Download current dataset as an updated Excel file
   exportCurrent() {
     const wb = this.excel.toWorkbook(this.originalData);
     const blob = this.excel.workbookToBlob(wb);
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'DataTransportsFile-updated.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
+
+    // Build a FormData containing the workbook
+    const form = new FormData();
+    const file = new File([blob], 'DataTransportsFile-updated.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    form.append('file', file);
+    form.append('target', 'src/assets/Data/DataTransportsFile-updated.xlsx');
+
+    // Determine candidate upload endpoints in order of preference:
+    // 1) runtime config: window.APP_UPLOAD_ENDPOINT (set by hosting page)
+    // 2) meta tag <meta name="upload-endpoint" content="...">
+    // 3) sensible relative endpoints that can be proxied by a server: /api/upload-excel, /upload-excel
+    const candidates: string[] = [];
+    try {
+      const win: any = window as any;
+      if (win && win.APP_UPLOAD_ENDPOINT) candidates.push(String(win.APP_UPLOAD_ENDPOINT));
+    } catch (e) { /* ignore */ }
+    try {
+      const meta = document.querySelector('meta[name="upload-endpoint"]') as HTMLMetaElement | null;
+      if (meta && meta.content) candidates.push(meta.content);
+    } catch (e) { /* ignore */ }
+    candidates.push('/api/upload-excel', '/upload-excel');
+
+    // helper: fetch with timeout
+    const fetchWithTimeout = (url: string, init: RequestInit, timeout = 7000) => {
+      return new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('timeout')), timeout);
+        fetch(url, init).then((res) => { clearTimeout(timer); resolve(res); }).catch((err) => { clearTimeout(timer); reject(err); });
+      });
+    };
+
+    // Try each candidate sequentially; if any succeed return true
+    const tryUpload = async (): Promise<boolean> => {
+      for (const url of candidates) {
+        if (!url) continue;
+        try {
+          const absolute = url.startsWith('http') ? url : url; // relative URLs preserved
+          const res = await fetchWithTimeout(absolute, { method: 'POST', body: form }, 8000);
+          if (res.ok) {
+            try { await res.json(); } catch (_) { /* ignore parse error */ }
+            return true;
+          }
+        } catch (e) {
+          // continue to next candidate
+          console.warn('Upload attempt failed for', url, e);
+        }
+      }
+      return false;
+    };
+
+    try {
+      tryUpload().then((ok) => {
+        if (ok) {
+          // uploaded successfully
+          alert('Saved updated Excel on server.');
+        } else {
+          // all uploads failed — fall back to download
+          console.warn('All upload attempts failed, falling back to download.');
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'DataTransportsFile-updated.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        }
+      }).catch((err) => {
+        console.warn('Upload flow failed, falling back to download:', err);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'DataTransportsFile-updated.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      });
+    } catch (e) {
+      console.warn('Unexpected error exporting/uploading workbook:', e);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'DataTransportsFile-updated.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    }
   }
 }

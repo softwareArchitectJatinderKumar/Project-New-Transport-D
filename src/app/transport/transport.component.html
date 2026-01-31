@@ -2,41 +2,54 @@
   <header class="toolbar">
     <h2>Transports</h2>
     <div class="toolbar-controls">
-      <input class="search" placeholder="Search across all columns..." (input)="onSearchChange($event.target.value)" />
-      <button class="btn" (click)="exportCurrent()">Export Updated Excel</button>
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input class="search" placeholder="Search..." (input)="onSearchChange($event.target.value)" />
+      </div>
+        <button class="filter-toggle" (click)="filtersOpen = !filtersOpen" aria-expanded="{{filtersOpen}}">Filters ▾</button>
+      <button class="btn icon-only" (click)="openAddModal()" title="Add New Record">➕</button>
+      <button class="btn icon-only" (click)="exportCurrent()" title="Export">📤</button>
     </div>
     <div class="user-bar">
       <ng-container *ngIf="currentUser; else guest">
-        <span class="user">{{ currentUser.username }} ({{ currentUser.role }})</span>
-        <button class="btn small" (click)="logout()">Logout</button>
+        <span class="user">{{ currentUser.username }}</span>
+        <button class="btn icon-only" (click)="logout()" title="Logout">🚪</button>
       </ng-container>
       <ng-template #guest><span class="user">Not signed in</span></ng-template>
     </div>
   </header>
 
   <div class="meta">
-    <div>Showing: {{ filteredData.length }} total, page {{ currentPage }} / {{ totalPages }}</div>
+    <div>Showing {{ filteredData.length }} records</div>
     <div>
-      Page size:
+      Size:
       <select (change)="$any($event.target).value && setPageSize($any($event.target).value)" [value]="pageSize">
         <option value="5">5</option>
         <option value="10">10</option>
-        <option value="25">25</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
         <option value="50">50</option>
+        <option value="999999">All</option>
       </select>
     </div>
   </div>
 
-  <div class="filters" style="margin-bottom:12px;">
-    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterCrane" (change)="onFilterChange()" /> Crane</label>
-    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterContainer" (change)="onFilterChange()" /> Container</label>
-    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterFullLoads" (change)="onFilterChange()" /> Full Loads</label>
-    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterGeneralFreight" (change)="onFilterChange()" /> General Freight</label>
-    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterVehicle" (change)="onFilterChange()" /> Vehicle</label>
-    <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterRefrigerated" (change)="onFilterChange()" /> Refrigerated</label>
+  <!-- Responsive filter bar (mirrors home) -->
+  <div class="filter-bar" [class.open]="filtersOpen">
+    <div class="filter-row">
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterCrane" (change)="onFilterChange()" /> Crane</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterContainer" (change)="onFilterChange()" /> Container</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterFullLoads" (change)="onFilterChange()" /> Full Loads</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterGeneralFreight" (change)="onFilterChange()" /> General Freight</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterVehicle" (change)="onFilterChange()" /> Vehicle</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterRefrigerated" (change)="onFilterChange()" /> Refrigerated</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterUrgent" (change)="onFilterChange()" /> URGENT</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterSensitive" (change)="onFilterChange()" /> Sensitive Freight</label>
+    </div>
   </div>
 
   <div class="load-banner" *ngIf="loadMessage">{{ loadMessage }}</div>
+
 
   <div class="table-wrap" *ngIf="rows().length > 0; else empty">
     <table>
@@ -54,8 +67,8 @@
           <td *ngFor="let c of columns()">{{ row[c] }}</td>
           <td class="actions">
             <ng-container *ngIf="currentUser; else signedOutActions">
-              <button class="btn small" (click)="openEditModal(i)">Edit</button>
-              <button class="btn small danger" (click)="deleteRow(i)">Delete</button>
+              <button class="btn icon-only" (click)="openEditModal(i)" title="Edit">✏️</button>
+              <button class="btn icon-only danger" (click)="deleteRow(i)" title="Delete">🗑️</button>
             </ng-container>
             <ng-template #signedOutActions>
               <span class="small muted">Sign in to edit</span>
@@ -66,9 +79,9 @@
     </table>
 
     <div class="pagination">
-      <button class="btn" (click)="changePage(-1)">Prev</button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button class="btn" (click)="changePage(1)">Next</button>
+      <button class="btn icon-only" (click)="changePage(-1)" title="Previous">◀</button>
+      <span>{{ currentPage }}/{{ totalPages }}</span>
+      <button class="btn icon-only" (click)="changePage(1)" title="Next">▶</button>
     </div>
   </div>
 
@@ -78,10 +91,10 @@
 
   <!-- Modal editor -->
   <div class="modal-backdrop" *ngIf="modalOpen">
-    <div class="modal-dialog" role="dialog" aria-modal="true">
-      <header class="modal-header">
-        <h3>Edit Transport</h3>
-      </header>
+  <div class="modal-dialog" role="dialog" aria-modal="true">
+    <header class="modal-header">
+      <h3>{{ isAddMode ? 'Add Transport' : 'Edit Transport' }}</h3>
+    </header>
       <div class="modal-body">
         <form class="modal-fields">
           <div class="field" *ngFor="let c of modalColumns()">
@@ -96,8 +109,8 @@
         </form>
       </div>
       <footer class="modal-footer">
-        <button class="btn" (click)="saveModalEdit()">Save</button>
-        <button class="btn" (click)="closeEditModal()">Cancel</button>
+      <button class="btn icon-only" (click)="isAddMode ? saveAddModal() : saveModalEdit()" title="Save">💾</button>
+      <button class="btn icon-only" (click)="closeEditModal()" title="Cancel">✖</button>
       </footer>
     </div>
   </div>
