@@ -1,8 +1,5 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/transport-app/browser",
-  "framework": "angular",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://transport-directs.vercel.app/api/$1" }
-  ]
+  "framework": "angular"
 }
