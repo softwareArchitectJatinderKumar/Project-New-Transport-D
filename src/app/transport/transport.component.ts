@@ -25,8 +25,7 @@ export class TransportComponent implements OnInit {
   searchText = signal('');
 
   // API server URL configuration
-  private readonly SERVER_PORT = 3000;
-  private readonly API_URL = typeof window !== 'undefined' && (window as any).ENV?.API_URL || '/api';
+  private readonly API_URL = typeof window !== 'undefined' && (window as any).ENV?.API_URL || '';
   private get serverUrl(): string {
     return this.API_URL;
   }
@@ -122,7 +121,7 @@ export class TransportComponent implements OnInit {
       },
       (err) => {
         console.error('Failed to load Excel file:', err);
-        this.loadError = 'Failed to load Excel file. Ensure server is running on port ' + this.SERVER_PORT;
+        this.loadError = 'Failed to load Excel file. Ensure the server API is running.';
         this.originalData = [];
         this.setRows([]);
       }
