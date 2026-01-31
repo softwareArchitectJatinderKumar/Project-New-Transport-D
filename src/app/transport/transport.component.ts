@@ -24,10 +24,12 @@ export class TransportComponent implements OnInit {
   // current search text
   searchText = signal('');
 
-  // API server URL configuration
-  private readonly API_URL = typeof window !== 'undefined' && (window as any).ENV?.API_URL || '';
-  private get serverUrl(): string {
-    return this.API_URL;
+  // Helper to get API base URL
+  private get apiBaseUrl(): string {
+    return typeof window !== 'undefined' && (window as any).ENV?.API_URL || '';
+  }
+  private get apiExcelUrl(): string {
+    return this.apiBaseUrl + '/api/excel';
   }
 
   // Columns to always show on small screens
@@ -99,29 +101,23 @@ export class TransportComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Check if server is available
-    this.checkServerHealth();
-
-    // Use the server API endpoint to load the Excel file
-    const excelUrl = `${this.serverUrl}/api/excel`;
-
-    this.http.get(excelUrl, { responseType: 'arraybuffer' }).subscribe(
-      (buffer) => {
-        if (!this.isXlsx(buffer)) {
-          console.error('Loaded file is not a valid XLSX');
-          this.loadError = 'File is not a valid Excel file';
+    // Load data from API (Vercel KV)
+    this.http.get<any[]>(this.apiExcelUrl).subscribe(
+      (data) => {
+        if (!data || !Array.isArray(data)) {
+          console.error('Invalid data format from API');
+          this.loadError = 'Invalid data format';
           this.originalData = [];
           this.setRows([]);
           return;
         }
         this.loadMessage = null;
-        const data = this.excel.read(buffer);
         this.originalData = data;
         this.setRows(data);
       },
       (err) => {
-        console.error('Failed to load Excel file:', err);
-        this.loadError = 'Failed to load Excel file. Ensure the server API is running.';
+        console.error('Failed to load data:', err);
+        this.loadError = 'Failed to load data. Ensure the server API is running.';
         this.originalData = [];
         this.setRows([]);
       }
@@ -170,25 +166,6 @@ export class TransportComponent implements OnInit {
     } catch (err) {
       this.filtersOpen = false;
     }
-  }
-
-  /**
-   * Check if the server is available
-   */
-  private checkServerHealth() {
-    const healthUrl = `${this.serverUrl}/api/health`;
-
-    fetch(healthUrl)
-      .then(response => {
-        if (response.ok) {
-          console.log('Server is available at', healthUrl);
-        }
-      })
-      .catch(err => {
-        console.warn('Server not available at', healthUrl, err);
-        this.saveStatus = 'Warning: Server not available. Save may not work.';
-        setTimeout(() => this.saveStatus = null, 5000);
-      });
   }
 
   logout() {
@@ -472,10 +449,20 @@ export class TransportComponent implements OnInit {
       this.isAddMode = false;
       this.currentPage = this.totalPages;
     }
-    // Save to server using ExcelService
-    this.excel.saveToServer(this.originalData);
-    this.saveStatus = 'Record saved successfully!';
-    setTimeout(() => this.saveStatus = null, 3000);
+
+    // Save to server
+    this.http.put(this.apiExcelUrl, { data: this.originalData }).subscribe({
+      next: () => {
+        this.saveStatus = 'Record saved successfully!';
+        setTimeout(() => this.saveStatus = null, 3000);
+      },
+      error: (err) => {
+        console.error('Failed to save:', err);
+        this.saveStatus = 'Save failed. Changes may not persist.';
+        setTimeout(() => this.saveStatus = null, 3000);
+      }
+    });
+
     this.closeEditModal();
   }
 
@@ -487,10 +474,20 @@ export class TransportComponent implements OnInit {
     this.isAddMode = false;
     this.currentPage = Math.max(1, Math.ceil((this.originalData.length || 1) / this.pageSize));
     this.applyFilters();
-    // Save to server using ExcelService
-    this.excel.saveToServer(this.originalData);
-    this.saveStatus = 'New record saved successfully!';
-    setTimeout(() => this.saveStatus = null, 3000);
+
+    // Save to server
+    this.http.put(this.apiExcelUrl, { data: this.originalData }).subscribe({
+      next: () => {
+        this.saveStatus = 'New record saved successfully!';
+        setTimeout(() => this.saveStatus = null, 3000);
+      },
+      error: (err) => {
+        console.error('Failed to save:', err);
+        this.saveStatus = 'Save failed. Changes may not persist.';
+        setTimeout(() => this.saveStatus = null, 3000);
+      }
+    });
+
     this.closeEditModal();
   }
 
