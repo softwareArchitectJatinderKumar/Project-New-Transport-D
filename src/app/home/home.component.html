@@ -3,44 +3,35 @@
     <h2>Transport Data</h2>
     <div class="toolbar-controls">
       <input class="search" placeholder="Search across all columns..." (input)="onSearchChange($event.target.value)" />
-      <div class="filters">
-        <label class="filter-checkbox">
-          <input type="checkbox" [(ngModel)]="filterCrane" (change)="onFilterChange()" />
-          Crane
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" [(ngModel)]="filterContainer" (change)="onFilterChange()" />
-          Container
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" [(ngModel)]="filterFullLoads" (change)="onFilterChange()" />
-          Full Loads
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" [(ngModel)]="filterGeneralFreight" (change)="onFilterChange()" />
-          General Freight
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" [(ngModel)]="filterVehicle" (change)="onFilterChange()" />
-          Vehicle
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" [(ngModel)]="filterRefrigerated" (change)="onFilterChange()" />
-          Refrigerated
-        </label>
-      </div>
+      <button class="filter-toggle" (click)="filtersOpen = !filtersOpen" aria-expanded="{{filtersOpen}}">Filters ▾</button>
     </div>
   </header>
 
+  <!-- Separate responsive filter bar -->
+  <div class="filter-bar" [class.open]="filtersOpen">
+    <div class="filter-row">
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterCrane" (change)="onFilterChange()" /> Crane</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterContainer" (change)="onFilterChange()" /> Container</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterFullLoads" (change)="onFilterChange()" /> Full Loads</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterGeneralFreight" (change)="onFilterChange()" /> General Freight</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterVehicle" (change)="onFilterChange()" /> Vehicle</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterRefrigerated" (change)="onFilterChange()" /> Refrigerated</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterUrgent" (change)="onFilterChange()" /> URGENT</label>
+      <label class="filter-checkbox"><input type="checkbox" [(ngModel)]="filterSensitive" (change)="onFilterChange()" /> Sensitive Freight</label>
+    </div>
+  </div>
+
   <div class="meta">
-    <div>Showing: {{ filteredData.length }} total, page {{ currentPage }} / {{ totalPages }}</div>
+    <div>Showing {{ filteredData.length }} records</div>
     <div>
-      Page size:
+      Size:
       <select (change)="$any($event.target).value && setPageSize($any($event.target).value)" [value]="pageSize">
         <option value="5">5</option>
         <option value="10">10</option>
-        <option value="25">25</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
         <option value="50">50</option>
+        <option value="999999">All</option>
       </select>
     </div>
   </div>
@@ -51,7 +42,7 @@
     <table>
       <thead>
         <tr>
-          <th *ngFor="let c of columns()" (click)="toggleSort(c)" class="sortable">
+          <th *ngFor="let c of getTableColumns()" (click)="toggleSort(c)" class="sortable">
             {{ c }}
             <span class="sort-indicator" *ngIf="sortColumn === c">{{ sortDirection === 'asc' ? '▲' : sortDirection === 'desc' ? '▼' : '' }}</span>
           </th>
@@ -59,7 +50,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let row of rows(); let i = index">
-          <td *ngFor="let c of columns()">
+          <td *ngFor="let c of getTableColumns()">
             {{ row[c] }}
           </td>
         </tr>
@@ -67,9 +58,9 @@
     </table>
 
     <div class="pagination">
-      <button class="btn" (click)="changePage(-1)">Prev</button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button class="btn" (click)="changePage(1)">Next</button>
+      <button class="btn icon-only" (click)="changePage(-1)" title="Previous">◀</button>
+      <span>{{ currentPage }}/{{ totalPages }}</span>
+      <button class="btn icon-only" (click)="changePage(1)" title="Next">▶</button>
     </div>
   </div>
 
