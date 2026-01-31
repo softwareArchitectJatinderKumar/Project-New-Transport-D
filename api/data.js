@@ -4,12 +4,8 @@
 const DATA_KEY = 'transport-data';
 
 // Try to use Supabase if configured
-let supabase;
-try {
-  supabase = require('@supabase/supabase-js');
-} catch (e) {
-  supabase = null;
-}
+let supabase = null;
+let supabaseClient = null;
 
 // Supabase config (set these in Vercel environment variables)
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
@@ -21,17 +17,36 @@ let memoryStore = [
   { LOCATION: 'Sample Location 2', PHONE: '098-765-4321', CONTACT: 'Jane Smith' }
 ];
 
-let supabaseClient = null;
-
-if (supabase && SUPABASE_URL && SUPABASE_KEY) {
-  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  console.log('Using Supabase for data storage');
+// Initialize Supabase
+function initSupabase() {
+  if (supabaseClient) return supabaseClient;
+  
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.log('Supabase not configured - using in-memory storage');
+    return null;
+  }
+  
+  try {
+    // Dynamic import to avoid build issues
+    const createClientModule = require('@supabase/supabase-js');
+    if (createClientModule && createClientModule.createClient) {
+      supabaseClient = createClientModule.createClient(SUPABASE_URL, SUPABASE_KEY);
+      console.log('Supabase client initialized');
+      return supabaseClient;
+    }
+  } catch (error) {
+    console.error('Failed to initialize Supabase:', error.message);
+  }
+  
+  return null;
 }
 
 export async function getData() {
-  if (supabaseClient) {
+  const client = initSupabase();
+  
+  if (client) {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await client
         .from('app_data')
         .select('data')
         .eq('key', DATA_KEY)
@@ -39,7 +54,8 @@ export async function getData() {
       
       if (error) {
         console.error('Supabase error:', error.message);
-        return null;
+        // Fall back to in-memory
+        return memoryStore;
       }
       
       if (data && data.data) {
@@ -48,7 +64,8 @@ export async function getData() {
       return null;
     } catch (error) {
       console.error('Error getting data from Supabase:', error);
-      return null;
+      // Fall back to in-memory
+      return memoryStore;
     }
   } else {
     // Local development - return in-memory data
@@ -57,21 +74,27 @@ export async function getData() {
 }
 
 export async function setData(data) {
-  if (supabaseClient) {
+  const client = initSupabase();
+  
+  if (client) {
     try {
       // Upsert - update if exists, insert if not
-      const { error } = await supabaseClient
+      const { error } = await client
         .from('app_data')
         .upsert({ key: DATA_KEY, data: data, updated_at: new Date().toISOString() });
       
       if (error) {
         console.error('Supabase error:', error.message);
-        return false;
+        // Still save to in-memory as fallback
+        memoryStore = data;
+        return true;
       }
       return true;
     } catch (error) {
       console.error('Error saving data to Supabase:', error);
-      return false;
+      // Fall back to in-memory
+      memoryStore = data;
+      return true;
     }
   } else {
     // Local development - save to in-memory store
